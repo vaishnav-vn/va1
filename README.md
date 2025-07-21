@@ -1,74 +1,108 @@
 # 🧩 Pad Image by Aspect for Outpaint — Custom ComfyUI Node
 
-A versatile ComfyUI node designed to **expand images to specific or randomized aspect ratios** with intelligent spatial placement and feathered masking — ideal for **outpainting, image composition, and directional canvas control**.
+A versatile ComfyUI node designed to **expand**, **pad**, and **mask** images to fixed or randomized aspect ratios with precise spatial and scale control — engineered for outpainting, compositional layout, and creative canvas expansion.
 
 ---
 
-## 🌟 Features
+## 🌟 Key Features
 
-- 🔁 **Random or fixed aspect ratios** (16:9, 3:2, 4:5, etc.)
-- 🧭 **Placement control**: center, random, left, right, up, down —  directional placement only applies when valid for AR shape
-- 🪶 **Feathered mask** for seamless outpainting transitions
-- 🔢 **Outputs used aspect ratio** as a `STRING` for logging or chaining
+* 🔁 **Aspect Ratio with Random Option**: Choose from fixed presets (`16:9`, `9:16`, `3:2`, `2:3`, `4:5`, `5:4`, `1:1`) or select **`random`** to pick a new ratio on each run.
+* 🔧 **Scale Percentage**: Shrink the input image **after** canvas sizing. Presets range from **`50%`** to **`100%`**, plus **`random`** for varying scales each execution. When using `1:1`, **100%** is disabled to ensure visible shrinkage.
+* 🧭 **Placement Control**: Full spatial options:
+
+  * **Directional**: `left`, `right`, `up`, `down`
+  * **3×3 Grid**: `top-left`, `top-mid`, `top-right`, `mid-left`, `center`, `mid-right`, `bottom-left`, `bottom-mid`, `bottom-right`
+  * **Random**: Uniform placement anywhere on the canvas.
+  * **Smart Fallbacks**: Directional choices auto-revert to **`center`** if incompatible with the aspect ratio’s orientation (e.g., `left` on a portrait canvas).
+* 🪶 **Feathered Mask**: Generates a soft-edged mask for the new padded areas to facilitate seamless inpainting/outpainting.
 
 ---
 
-## 🧠 Primary Use Case: Outpainting
+## 🧠 Primary Use Case: Outpainting & Canvas Expansion
 
-This node is purpose-built for **inpainting and outpainting workflows**, allowing you to:
-- Expand a canvas in specific directions
-- Randomize aspect ratio selection per generation
-- Use precise control for storytelling layout and composition
-- Automatically mask newly padded areas for targeted image editing
+This node is ideal for workflows where you need to prepare a larger canvas around an existing image:
+
+* **Directional Outpainting**: Expand to the right for narrative extension, upward for sky or background, etc.
+* **Randomized Compositions**: Generate varied framing and scales in batch jobs.
+* **Precise Layouts**: Use grid/aligned placements to position the subject consistently.
+* **Seamless Blending**: Feathered masks ensure your inpainting edits blend naturally with original content.
 
 ---
 
 ## 🔧 Inputs
 
-| Name | Type | Description |
-|------|------|-------------|
-| `image` | `IMAGE` | The input image to be padded |
-| `aspect_ratio` | `["16:9", "9:16", "3:2", "2:3", "4:5", "5:4"]` | Aspect ratio to pad the image to. Randomized if seed changes. |
-| `placement` | `["center", "random", "left", "right", "up", "down"]` | Placement of the original image inside the new canvas. Invalid directions fall back to center. |
-| `seed` | `INT` | Changing this triggers random AR selection (Control-After-Generate supported) |
-| `feathering` | `INT` | Softens mask edges for smooth inpainting blending |
+| Name           | Type                                                                                                                                                                                        | Description                                                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `image`        | `IMAGE`                                                                                                                                                                                     | The input image tensor (B×H×W×C).                                                                                                             |
+| `aspect_ratio` | `"random"`, `"16:9"`, `"9:16"`, `"3:2"`,<br>`"2:3"`, `"4:5"`, `"5:4"`, `"1:1"`                                                                                                              | Target aspect ratio for the canvas. Select **`random`** for a fresh ratio each run.                                                           |
+| `placement`    | `"center"`, `"random"`,<br>`"left"`,`"right"`,`"up"`,`"down"`,<br>`"top-left"`,`"top-mid"`,`"top-right"`,<br>`"mid-left"`,`"mid-right"`,<br>`"bottom-left"`,`"bottom-mid"`,`"bottom-right"` | Spatial placement of the shrunk image inside the new canvas.                                                                                  |
+| `scale_pct`    | `"random"`, `"50"`, `"60"`, `"70"`, `"80"`, `"90"`, `"100"`                                                                                                                                 | Percentage to shrink the original image **after** canvas sizing. `random` selects one of the valid scales each run. `100` disabled for `1:1`. |
+| `seed`         | `INT` (default `0`)                                                                                                                                                                         | Slider to **force** node re-execution in ComfyUI. Does **not** affect any random modes — each `random` is truly independent.                  |
+| `feathering`   | `INT` (0–1024)                                                                                                                                                                              | Softness of the mask’s edge—higher values produce smoother transitions at the padded border.                                                  |
 
 ---
 
-## 📤 Outputs
+## 🧾 Outputs
 
-| Name | Type | Description |
-|------|------|-------------|
-| `Image` | `IMAGE` | The padded image |
-| `Mask` | `MASK` | Feathered mask showing padded regions |
-| `Used Aspect Ratio` | `STRING` | The final AR used (e.g., `"4:5"`), chainable downstream |
-
----
-
-## ⚙️ Smart Behavior
-
-### 🔁 Seed-Based Randomization
-
-- Each time the `seed` changes, a new aspect ratio is selected randomly from the list.
-- Fully compatible with `Control-After-Generate` for batch diversity.
-
-### 🧭 Placement Logic
-
-- Landscape-only placements: `"left"`, `"right"`
-- Portrait-only placements: `"up"`, `"down"`
-- Invalid placements (e.g., `"left"` on 9:16) fall back to `"center"`
-
-### 🪶 Mask Feathering
-
-- Padded edges are softly blended with the original content
-- Prevents hard seams when used in outpainting pipelines
-- `feathering = 0` produces a binary mask
+| Name                | Type     | Description                                                                                     |
+| ------------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `Image`             | `IMAGE`  | The padded (and optionally shrunk) image tensor.                                                |
+| `Mask`              | `MASK`   | Feathered mask where `0` = original content, `>0` = padded regions with smooth blending values. |
+| `Used Aspect Ratio` | `STRING` | The final aspect ratio used (e.g., `"3:2"`).                                                    |
 
 ---
 
-## 🧪 Example Workflows
+## 🚀 Installation
 
-### ➕ Expand a Portrait Canvas Upward
+**Option 1: ComfyUI Manager**
 
-```text
-AR = "9:16", Placement = "up", Feathering = 64
+1. Open **ComfyUI Manager**
+2. Click **“Install from URL”**
+3. Paste:
+
+   ```text
+   https://github.com/vaishnav-vn/va1
+   ```
+
+**Option 2: Manual**
+
+```bash
+cd ComfyUI/custom_nodes
+git clone https://github.com/vaishnav-vn/va1.git
+```
+
+Restart ComfyUI.
+
+---
+
+## 🔄 Example Workflows
+
+### 1. Random Outpainting Variations
+
+* `aspect_ratio`: `random`
+* `placement`: `random`
+* `scale_pct`: `random`
+* `seed`: slide to re-run
+
+### 2. Grid-Aligned Portrait Expansion
+
+* `aspect_ratio`: `9:16`
+* `placement`: `top-mid`
+* `scale_pct`: `80`
+* `seed`: any value (just to refresh)
+
+### 3. Left-Aligned Landscape Resize
+
+* `aspect_ratio`: `16:9`
+* `placement`: `left`
+* `scale_pct`: `50`
+
+---
+
+## 📋 Node Metadata
+
+* **Node Name**: `Pad Image by Aspect for Outpaint`
+* **Category**: `va1`
+* **Compatibility**: Works with any ComfyUI pipeline accepting `IMAGE` and `MASK` inputs.
+
+---
