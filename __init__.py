@@ -1,4 +1,11 @@
-from .aspect_outpaint_node import RandomAspectRatioMask
+import os
+import sys
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
+from aspect_outpaint_node import RandomAspectRatioMask
 
 NODE_CLASS_MAPPINGS = {
     "RandomAspectRatioMask": RandomAspectRatioMask
